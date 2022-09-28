@@ -5950,6 +5950,7 @@ mg_poll(struct mg_pollfd *pfd,
 		}
 
 		result = poll(pfd, n, ms_now);
+		// printk("Polling: %d \n", result);
 		if (result != 0) {
 			/* Poll returned either success (1) or error (-1).
 			 * Forward both to the caller. */
@@ -6110,6 +6111,7 @@ push_inner(struct mg_context *ctx,
 			 * Maybe it helps, maybe not. */
 			mg_sleep(5);
 		} else {
+			mg_sleep(5);
 			/* For sockets, wait for the socket using poll */
 			struct mg_pollfd pfd[1];
 			int pollres;
