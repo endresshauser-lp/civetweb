@@ -20199,6 +20199,11 @@ mg_start(const struct mg_callbacks *callbacks,
 	init.callbacks = callbacks;
 	init.user_data = user_data;
 	init.configuration_options = options;
+	
+#if defined(__ZEPHYR__)
+	// reset used stack index in case if we restart webserver
+	zephyr_worker_stack_index = 0;
+#endif
 
 	return mg_start2(&init, NULL);
 }
