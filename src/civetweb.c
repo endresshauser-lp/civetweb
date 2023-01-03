@@ -186,13 +186,13 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #include <time.h>
 
 #include <ctype.h>
-#include <net/socket.h>
-#include <posix/pthread.h>
-#include <posix/time.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/posix/pthread.h>
+#include <zephyr/posix/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
 #include <fcntl.h>
 
