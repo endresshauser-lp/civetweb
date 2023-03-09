@@ -208,6 +208,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define MAX_WORKER_THREADS (CONFIG_MAX_PTHREAD_COUNT - 2)
 
 #if !defined(CONFIG_ZEPHYR_MAIN_STACK_SIZE) || (CONFIG_ZEPHYR_MAIN_STACK_SIZE <= 1)
+#undef CONFIG_ZEPHYR_MAIN_STACK_SIZE
 #define CONFIG_ZEPHYR_MAIN_STACK_SIZE (0)
 #endif
 
