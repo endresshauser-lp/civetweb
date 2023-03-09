@@ -196,7 +196,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 #include <fcntl.h>
 
-#include <libc_extensions.h>
+#include "compatibility/libc_extensions.h"
 
 #ifdef CONFIG_USE_MBEDTLS
 #define USE_MBEDTLS
@@ -3379,7 +3379,7 @@ static void mg_cry_internal_impl(const struct mg_connection *conn,
                                  unsigned line,
                                  const char *fmt,
                                  va_list ap);
-#include "external_mg_cry_internal_impl.inl"
+#include "compatibility/external_mg_cry_internal_impl.inl"
 #elif !defined(NO_FILESYSTEMS)
 
 /* Print error message to the opened error log stream. */
@@ -15182,7 +15182,7 @@ header_val(const struct mg_connection *conn, const char *header)
 
 
 #if defined(MG_EXTERNAL_FUNCTION_log_access)
-#include "external_log_access.inl"
+#include "compatibility/external_log_access.inl"
 #elif !defined(NO_FILESYSTEMS)
 
 static void
