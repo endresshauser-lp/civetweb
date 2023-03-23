@@ -9767,7 +9767,7 @@ send_file_data(struct mg_connection *conn,
 			offset = (int64_t)sf_offs;
 		}
 #endif
-		if ((offset > 0) && (fseeko(filep->access.fp, offset, SEEK_SET) != 0)) {
+		if ((offset > 0) && (fseeko(filep->access.fp, offset, 0) != 0)) {
 			mg_cry_internal(conn,
 			                "%s: fseeko() failed: %s",
 			                __func__,
