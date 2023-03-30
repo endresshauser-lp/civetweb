@@ -14192,7 +14192,10 @@ handle_request(struct mg_connection *conn)
 	                        &auth_callback_data,
 	                        NULL)) {
 		if (!auth_handler(conn, auth_callback_data)) {
-
+			mg_send_http_error(conn,
+			                   401,
+			                   "%s Unauthorized",
+			                   conn->request_info.request_method);
 			/* Callback handler will not be used anymore. Release it */
 			release_handler_ref(conn, handler_info);
 
