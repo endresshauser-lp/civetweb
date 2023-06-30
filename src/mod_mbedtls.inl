@@ -1,18 +1,17 @@
 #if defined(USE_MBEDTLS) // USE_MBEDTLS used with NO_SSL
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
-#include "mbedtls/net.h"
+#include "mbedtls/net_sockets.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 
-#include <drivers/entropy.h>
+#include <zephyr/drivers/entropy.h>
 
 #include <string.h>
 
@@ -115,7 +114,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 #endif
 
 	#if defined(CONFIG_ENTROPY_HAS_DRIVER)
-	entropy_dev = device_get_binding(DT_CHOSEN_ZEPHYR_ENTROPY_LABEL);
+	entropy_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_entropy));
 	if (!entropy_dev) {
 		DEBUG_TRACE("Failed to obtain entropy device");
 		return -ENODEV;
@@ -142,7 +141,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 
 	// TODO Maybe add Zephyr specific implementation of mbedtls_x509_crt_parse_file
 #if defined(__ZEPHYR__)
-	rc = mbedtls_pk_parse_key(&ctx->pkey, crt, strlen(crt) + 1, NULL, 0 );
+	rc = mbedtls_pk_parse_key(&ctx->pkey, crt, strlen(crt) + 1, NULL, 0, tls_entropy_func, NULL );
 #else
     rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL);
 #endif // defined(__ZEPHYR__)
