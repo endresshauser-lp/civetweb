@@ -12,6 +12,7 @@
 #include "mbedtls/x509_crt.h"
 
 #include <zephyr/drivers/entropy.h>
+#include <zephyr/random/rand32.h>
 
 #include <string.h>
 
@@ -50,30 +51,56 @@ static const struct device *entropy_dev;
 
 
 #if defined(CONFIG_ENTROPY_HAS_DRIVER)
-static int tls_entropy_func(void *ctx, unsigned char *buf, size_t len)
+#if !defined MAX_RANDOMNESS_JUNK_SIZE
+#define MAX_RANDOMNESS_JUNK_SIZE 1024
+#endif
+static int tls_entropy_func(void *unused, unsigned char *output, size_t len)
 {
-	ARG_UNUSED(ctx);
+	BUILD_ASSERT(sizeof(unsigned char) == sizeof(uint8_t), "Adapt type!");
 
-	return entropy_get_entropy(entropy_dev, buf, len);
+    ARG_UNUSED(unused);
+    if(output == NULL) {
+        DEBUG_TRACE("Invalid input");
+        return -1;
+    }
+
+    size_t cursor = 0;
+    size_t len_to_write = 0;
+    int err = 0;
+
+    const struct device *entropy;
+    entropy = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_entropy));
+
+    do {
+        len_to_write = (len - cursor > MAX_RANDOMNESS_JUNK_SIZE) ? MAX_RANDOMNESS_JUNK_SIZE : len - cursor;
+        int err = entropy_get_entropy(entropy, &output[cursor], len_to_write);
+        cursor += len_to_write;
+        if (err != 0) {
+            DEBUG_TRACE("Can't get real random number: %d", err);
+            return err;
+        }
+    } while(cursor < len);
+
+    return err;
 }
 #else
-static int tls_entropy_func(void *ctx, unsigned char *buf, size_t len)
+static int tls_entropy_func(void *unused, unsigned char *output, size_t len)
 {
-	ARG_UNUSED(ctx);
+	ARG_UNUSED(unused);
 
 	size_t i = len / 4;
 	uint32_t val;
 
 	while (i--) {
 		val = sys_rand32_get();
-		UNALIGNED_PUT(val, (uint32_t *)buf);
-		buf += 4;
+		UNALIGNED_PUT(val, (uint32_t *)output);
+		output += 4;
 	}
 
 	i = len & 0x3;
 	val = sys_rand32_get();
 	while (i--) {
-		*buf++ = val;
+		*output++ = val;
 		val >>= 8;
 	}
 
