@@ -198,7 +198,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 
 #include "compatibility/libc_extensions.h"
 
-#ifdef CONFIG_USE_MBEDTLS
+#ifdef CONFIG_WEBSERVER_USE_HTTPS
 #define USE_MBEDTLS
 #endif
 
