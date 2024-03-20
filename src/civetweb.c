@@ -20586,7 +20586,7 @@ mg_get_system_info(char *buffer, int buflen)
 		            ",%s\"os\" : \"%s %s\"",
 		            eol,
 		            "Zephyr OS",
-		            ZEPHYR_VERSION);
+		            STRINGIFY(ZEPHYR_VERSION));
 		system_info_length += mg_str_append(&buffer, end, block);
 #else
 		struct utsname name;
