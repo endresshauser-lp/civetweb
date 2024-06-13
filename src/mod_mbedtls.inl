@@ -1,18 +1,18 @@
 #if defined(USE_MBEDTLS) // USE_MBEDTLS used with NO_SSL
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
-#include "mbedtls/net.h"
+#include "mbedtls/net_sockets.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 
-#include <drivers/entropy.h>
+#include <zephyr/drivers/entropy.h>
+#include <zephyr/random/rand32.h>
 
 #include <string.h>
 
@@ -51,30 +51,56 @@ static const struct device *entropy_dev;
 
 
 #if defined(CONFIG_ENTROPY_HAS_DRIVER)
-static int tls_entropy_func(void *ctx, unsigned char *buf, size_t len)
+#if !defined MAX_RANDOMNESS_JUNK_SIZE
+#define MAX_RANDOMNESS_JUNK_SIZE 1024
+#endif
+static int tls_entropy_func(void *unused, unsigned char *output, size_t len)
 {
-	ARG_UNUSED(ctx);
+	BUILD_ASSERT(sizeof(unsigned char) == sizeof(uint8_t), "Adapt type!");
 
-	return entropy_get_entropy(entropy_dev, buf, len);
+    ARG_UNUSED(unused);
+    if(output == NULL) {
+        DEBUG_TRACE("Invalid input");
+        return -1;
+    }
+
+    size_t cursor = 0;
+    size_t len_to_write = 0;
+    int err = 0;
+
+    const struct device *entropy;
+    entropy = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_entropy));
+
+    do {
+        len_to_write = (len - cursor > MAX_RANDOMNESS_JUNK_SIZE) ? MAX_RANDOMNESS_JUNK_SIZE : len - cursor;
+        int err = entropy_get_entropy(entropy, &output[cursor], len_to_write);
+        cursor += len_to_write;
+        if (err != 0) {
+            DEBUG_TRACE("Can't get real random number: %d", err);
+            return err;
+        }
+    } while(cursor < len);
+
+    return err;
 }
 #else
-static int tls_entropy_func(void *ctx, unsigned char *buf, size_t len)
+static int tls_entropy_func(void *unused, unsigned char *output, size_t len)
 {
-	ARG_UNUSED(ctx);
+	ARG_UNUSED(unused);
 
 	size_t i = len / 4;
 	uint32_t val;
 
 	while (i--) {
 		val = sys_rand32_get();
-		UNALIGNED_PUT(val, (uint32_t *)buf);
-		buf += 4;
+		UNALIGNED_PUT(val, (uint32_t *)output);
+		output += 4;
 	}
 
 	i = len & 0x3;
 	val = sys_rand32_get();
 	while (i--) {
-		*buf++ = val;
+		*output++ = val;
 		val >>= 8;
 	}
 
@@ -115,7 +141,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 #endif
 
 	#if defined(CONFIG_ENTROPY_HAS_DRIVER)
-	entropy_dev = device_get_binding(DT_CHOSEN_ZEPHYR_ENTROPY_LABEL);
+	entropy_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_entropy));
 	if (!entropy_dev) {
 		DEBUG_TRACE("Failed to obtain entropy device");
 		return -ENODEV;
@@ -142,7 +168,7 @@ mbed_sslctx_init(SSL_CTX *ctx, const char *crt)
 
 	// TODO Maybe add Zephyr specific implementation of mbedtls_x509_crt_parse_file
 #if defined(__ZEPHYR__)
-	rc = mbedtls_pk_parse_key(&ctx->pkey, crt, strlen(crt) + 1, NULL, 0 );
+	rc = mbedtls_pk_parse_key(&ctx->pkey, crt, strlen(crt) + 1, NULL, 0, tls_entropy_func, NULL );
 #else
     rc = mbedtls_pk_parse_keyfile(&ctx->pkey, crt, NULL);
 #endif // defined(__ZEPHYR__)
